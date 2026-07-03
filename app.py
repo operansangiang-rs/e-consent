@@ -36,26 +36,9 @@ with st.expander("Klik untuk membaca Detail Tindakan & Risiko", expanded=True):
 st.write("---")
 
 # ==========================================
-# 3. BAGIAN VERIFIKASI ONLINE (SIMULASI OTP)
+# 3. BAGIAN PERNYATAAN & TANDA TANGAN
 # ==========================================
-st.subheader("3. Verifikasi Keamanan")
-col1, col2 = st.columns([2, 1])
-with col1:
-    no_hp = st.text_input("Masukkan Nomor WhatsApp Aktif:", placeholder="Contoh: 0812xxxx")
-with col2:
-    st.write(" ") 
-    st.write(" ") 
-    if st.button("Kirim OTP"):
-        st.toast("Simulasi: Kode OTP '1234' berhasil dikirim ke WhatsApp!", icon="💬")
-
-otp_input = st.text_input("Masukkan 4 Digit OTP:", max_chars=4, placeholder="Masukkan kode yang diterima")
-
-st.write("---")
-
-# ==========================================
-# 4. BAGIAN PERNYATAAN & TANDA TANGAN
-# ==========================================
-st.subheader("4. Pernyataan Persetujuan")
+st.subheader("3. Pernyataan Persetujuan")
 setju_1 = st.checkbox("Saya menyatakan telah membaca, mendengar, dan memahami informasi tindakan medis di atas.")
 setju_2 = st.checkbox("Saya menyetujui tindakan tersebut dilakukan secara sadar, online, dan tanpa paksaan.")
 
@@ -76,9 +59,9 @@ canvas_result = st_canvas(
 st.write("---")
 
 # ==========================================
-# FUNGSI UNTUK MEMBUAT PDF SECARA DIGITAL
+# FUNGSI UNTUK MEMBUAT PDF (FIX ERROR BYTES)
 # ==========================================
-def buat_pdf(nama_p, nik_p, tgl_p, hp_p, waktu_p):
+def buat_pdf(nama_p, nik_p, tgl_p, waktu_p):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
@@ -96,7 +79,6 @@ def buat_pdf(nama_p, nik_p, tgl_p, hp_p, waktu_p):
     pdf.cell(0, 10, f"Nama Lengkap : {nama_p}", ln=True)
     pdf.cell(0, 10, f"NIK          : {nik_p}", ln=True)
     pdf.cell(0, 10, f"Tanggal Lahir: {tgl_p}", ln=True)
-    pdf.cell(0, 10, f"No HP        : {hp_p}", ln=True)
     pdf.ln(5)
     
     pdf.set_font("Arial", "B", 12)
@@ -107,16 +89,16 @@ def buat_pdf(nama_p, nik_p, tgl_p, hp_p, waktu_p):
     
     pdf.set_font("Arial", "I", 10)
     pdf.cell(0, 10, "Status Dokumen: APPROVED & VERIFIED (DIGITAL SIGNATURE)", ln=True)
-    return pdf.output(dest='S') # Mengembalikan file berupa bytes data
+    
+    # FIX: Mengubah string output PDF menjadi bytes murni agar Streamlit tidak eror
+    return bytes(pdf.output())
 
 # ==========================================
-# 5. TOMBOL SUBMIT & LOGIKA DOWNLOAD PDF
+# 4. TOMBOL SUBMIT & LOGIKA DOWNLOAD PDF
 # ==========================================
 if st.button("Kirim Persetujuan (Submit)", type="primary"):
-    if not nama or not nik or not no_hp:
+    if not nama or not nik:
         st.error("❌ Mohon lengkapi Data Diri Anda terlebih dahulu.")
-    elif otp_input != "1234":
-        st.error("❌ Kode OTP salah atau belum diisi (Gunakan kode simulasi: 1234).")
     elif not (setju_1 and setju_2):
         st.error("❌ Anda harus mencentang semua pernyataan persetujuan.")
     elif canvas_result.image_data is None:
@@ -127,10 +109,10 @@ if st.button("Kirim Persetujuan (Submit)", type="primary"):
         
         waktu_sekarang = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # Bikin file PDF di latar belakang backend
-        pdf_bytes = buat_pdf(nama, nik, tgl_lahir, no_hp, waktu_sekarang)
+        # Jalankan fungsi pembuat PDF (sudah berformat bytes asli)
+        pdf_bytes = buat_pdf(nama, nik, tgl_lahir, waktu_sekarang)
         
-        # Tombol Download PDF otomatis muncul setelah klik submit sukses
+        # Menampilkan tombol download PDF tanpa eror
         st.write("### ⬇️ Unduh Dokumen Resmi Anda:")
         st.download_button(
             label="Download Bukti Persetujuan (PDF)",
