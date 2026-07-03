@@ -1,7 +1,7 @@
-
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import datetime
+from fpdf import FPDF
 
 # Pengaturan halaman agar responsif di HP/Mobile
 st.set_page_config(page_title="E-Informed Consent", page_icon="📝", layout="centered")
@@ -21,12 +21,11 @@ tgl_lahir = st.date_input("Tanggal Lahir:", min_value=datetime.date(1940, 1, 1))
 st.write("---")
 
 # ==========================================
-# 2. BAGIAN PENJELASAN MEDIS (CONTOH KASUS)
+# 2. BAGIAN PENJELASAN MEDIS
 # ==========================================
 st.subheader("2. Penjelasan Tindakan Medis")
 st.warning("📋 **Jenis Tindakan: Pencabutan Gigi Bungsu (Odontektomi)**")
 
-# Menggunakan expander agar tampilan di HP ringkas dan rapi
 with st.expander("Klik untuk membaca Detail Tindakan & Risiko", expanded=True):
     st.write("""
     * **Tujuan Tindakan:** Mengeluarkan gigi geraham bungsu yang tumbuh miring/terpaku di dalam gusi untuk mencegah infeksi dan pergeseran gigi lainnya.
@@ -44,7 +43,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     no_hp = st.text_input("Masukkan Nomor WhatsApp Aktif:", placeholder="Contoh: 0812xxxx")
 with col2:
-    st.write(" ") # Ganjal jarak
+    st.write(" ") 
     st.write(" ") 
     if st.button("Kirim OTP"):
         st.toast("Simulasi: Kode OTP '1234' berhasil dikirim ke WhatsApp!", icon="💬")
@@ -54,17 +53,15 @@ otp_input = st.text_input("Masukkan 4 Digit OTP:", max_chars=4, placeholder="Mas
 st.write("---")
 
 # ==========================================
-# 4. BAGIAN PERNYATAAN & TANDA TANGAN DIGITAL
+# 4. BAGIAN PERNYATAAN & TANDA TANGAN
 # ==========================================
 st.subheader("4. Pernyataan Persetujuan")
-
-setuju_1 = st.checkbox("Saya menyatakan telah membaca, mendengar, dan memahami informasi tindakan medis di atas.")
-setuju_2 = st.checkbox("Saya menyetujui tindakan tersebut dilakukan secara sadar, online, dan tanpa paksaan.")
+setju_1 = st.checkbox("Saya menyatakan telah membaca, mendengar, dan memahami informasi tindakan medis di atas.")
+setju_2 = st.checkbox("Saya menyetujui tindakan tersebut dilakukan secara sadar, online, dan tanpa paksaan.")
 
 st.write(" ")
 st.write("**Gunakan jari Anda (di HP) atau mouse (di laptop) untuk tanda tangan di kotak bawah ini:**")
 
-# Komponen Canvas untuk coretan tanda tangan digital
 canvas_result = st_canvas(
     fill_color="rgba(255, 255, 255, 0)",
     stroke_width=3,
@@ -79,30 +76,65 @@ canvas_result = st_canvas(
 st.write("---")
 
 # ==========================================
-# 5. TOMBOL SUBMIT & OUTPUT AKHIR
+# FUNGSI UNTUK MEMBUAT PDF SECARA DIGITAL
+# ==========================================
+def buat_pdf(nama_p, nik_p, tgl_p, hp_p, waktu_p):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "BUKTI DIGITAL INFORMED CONSENT (E-IC)", ln=True, align="C")
+    pdf.ln(10)
+    
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(0, 10, f"Tanggal Transaksi: {waktu_p}", ln=True)
+    pdf.cell(0, 10, "-------------------------------------------------------------------------", ln=True)
+    pdf.ln(5)
+    
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, "DATA PASIEN:", ln=True)
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(0, 10, f"Nama Lengkap : {nama_p}", ln=True)
+    pdf.cell(0, 10, f"NIK          : {nik_p}", ln=True)
+    pdf.cell(0, 10, f"Tanggal Lahir: {tgl_p}", ln=True)
+    pdf.cell(0, 10, f"No HP        : {hp_p}", ln=True)
+    pdf.ln(5)
+    
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, "PERNYATAAN:", ln=True)
+    pdf.set_font("Arial", "", 12)
+    pdf.multi_cell(0, 10, "Pasien telah menyatakan SETUJU dan MEMAHAMI segala prosedur medis serta risiko tindakan Odontektomi (Cabut Gigi Bungsu) yang dilakukan secara sadar tanpa paksaan melalui sistem verifikasi online.")
+    pdf.ln(10)
+    
+    pdf.set_font("Arial", "I", 10)
+    pdf.cell(0, 10, "Status Dokumen: APPROVED & VERIFIED (DIGITAL SIGNATURE)", ln=True)
+    return pdf.output(dest='S') # Mengembalikan file berupa bytes data
+
+# ==========================================
+# 5. TOMBOL SUBMIT & LOGIKA DOWNLOAD PDF
 # ==========================================
 if st.button("Kirim Persetujuan (Submit)", type="primary"):
-    # Validasi apakah data sudah diisi lengkap
     if not nama or not nik or not no_hp:
         st.error("❌ Mohon lengkapi Data Diri Anda terlebih dahulu.")
     elif otp_input != "1234":
         st.error("❌ Kode OTP salah atau belum diisi (Gunakan kode simulasi: 1234).")
-    elif not (setuju_1 and setuju_2):
+    elif not (setju_1 and setju_2):
         st.error("❌ Anda harus mencentang semua pernyataan persetujuan.")
     elif canvas_result.image_data is None:
         st.error("❌ Mohon bubuhkan tanda tangan Anda terlebih dahulu.")
     else:
         st.success("✅ **Electronic Informed Consent BERHASIL Disimpan!**")
-        st.info("📦 **Bukti Transaksi Digital (Metadata):**")
+        st.balloons()
+        
         waktu_sekarang = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        st.json({
-            "Status Persetujuan": "APPROVED (ONLINE)",
-            "Nama Pasien": nama,
-            "NIK": nik,
-            "No HP/WhatsApp": no_hp,
-            "Waktu Validasi": waktu_sekarang,
-            "Metode Verifikasi": "Simulasi OTP WhatsApp Sukses",
-            "Integritas Data": "Disimpan ke Cloud Server (Simulasi)"
-        })
-        st.balloons()
+        # Bikin file PDF di latar belakang backend
+        pdf_bytes = buat_pdf(nama, nik, tgl_lahir, no_hp, waktu_sekarang)
+        
+        # Tombol Download PDF otomatis muncul setelah klik submit sukses
+        st.write("### ⬇️ Unduh Dokumen Resmi Anda:")
+        st.download_button(
+            label="Download Bukti Persetujuan (PDF)",
+            data=pdf_bytes,
+            file_name=f"E-Consent_{nik}.pdf",
+            mime="application/pdf"
+        )
